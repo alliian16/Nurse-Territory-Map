@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Nurse Territory Map</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--surface3:#191c2a;--border:#2e3350;--text:#e8eaf6;--muted:#7b82a8;--accent:#5c7cfa;--accent2:#748ffc;--success:#69db7c;--danger:#ff6b6b;--warning:#ffd43b;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+header{padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;height:52px;}
+.header-left{display:flex;align-items:center;gap:10px;}
+h1{font-size:15px;font-weight:600;letter-spacing:.03em;white-space:nowrap;}
+.map-tabs{display:flex;gap:4px;}
+.map-tab{padding:5px 14px;border-radius:8px;border:1px solid var(--border);font-size:12px;font-weight:600;cursor:pointer;background:var(--surface2);color:var(--muted);transition:all .18s;white-space:nowrap;}
+.map-tab:hover{border-color:var(--accent);color:var(--accent);}
+.map-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.header-actions{display:flex;gap:8px;align-items:center;}
+.hdr-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;border:1px solid var(--border);font-size:12px;font-weight:500;cursor:pointer;transition:all .18s;white-space:nowrap;background:var(--surface2);color:var(--text);}
+.hdr-btn:hover{border-color:var(--accent);color:var(--accent);}
+.hdr-btn.export{background:var(--success);border-color:var(--success);color:#0f1117;}
+.hdr-div{width:1px;height:22px;background:var(--border);}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99998;display:none;align-items:center;justify-content:center;}
+.modal-overlay.visible{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;width:360px;box-shadow:0 16px 48px rgba(0,0,0,.7);}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:8px;}
+.modal p{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;}
+.modal textarea{width:100%;height:120px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:10px;resize:vertical;outline:none;margin-bottom:12px;}
+.modal textarea:focus{border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;}
+.modal-btn{padding:7px 16px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;}
+.modal-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;}
+.modal-btn.cancel{background:var(--surface2);color:var(--muted);}
+.layout{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:310px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sidebar-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+.sidebar-section h2{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.input-row{display:flex;gap:8px;align-items:center;}
+.txt{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 11px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;outline:none;transition:border-color .2s;width:100%;}
+.txt:focus{border-color:var(--accent);}
+.txt::placeholder{color:var(--muted);}
+.field-label{font-size:11px;color:var(--muted);display:block;margin:9px 0 4px;}
+.mode-toggle{display:flex;background:var(--surface2);border-radius:8px;padding:3px;gap:2px;margin-bottom:10px;}
+.mode-btn{flex:1;padding:6px 8px;border:none;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;background:transparent;color:var(--muted);transition:all .2s;}
+.mode-btn.active{background:var(--accent);color:#fff;}
+.nbhd-section{background:var(--surface3);border:1px solid var(--border);border-radius:8px;padding:10px;margin-top:8px;}
+.nbhd-title{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--warning);margin-bottom:8px;}
+.add-btn{background:var(--accent);color:#fff;border:none;padding:7px 13px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.add-btn:hover{background:var(--accent2);}
+.color-row{display:flex;align-items:center;gap:7px;margin-top:8px;}
+input[type=color]{-webkit-appearance:none;appearance:none;width:32px;height:28px;border:2px solid var(--border);border-radius:7px;background:none;cursor:pointer;padding:2px;flex-shrink:0;}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0;}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:4px;}
+.swatches{display:flex;flex-wrap:wrap;gap:4px;flex:1;}
+.swatch{width:18px;height:18px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .1s;flex-shrink:0;}
+.swatch:hover{transform:scale(1.25);}
+.swatch.active{border-color:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.3);}
+.tab-row{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab{flex:1;padding:9px;text-align:center;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;background:none;border-top:none;border-left:none;border-right:none;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.tab-content{display:none;flex:1;flex-direction:column;overflow:hidden;}
+.tab-content.active{display:flex;}
+.scroll-list{flex:1;overflow-y:auto;padding:10px;}
+.scroll-list::-webkit-scrollbar{width:4px;}
+.scroll-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.nurse-item{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;margin-bottom:3px;transition:background .15s;}
+.nurse-item:hover{background:var(--surface2);}
+.ndot-wrap{position:relative;flex-shrink:0;}
+.ndot{width:13px;height:13px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s;display:block;}
+.ndot:hover{transform:scale(1.35);border-color:rgba(255,255,255,.5);}
+.ncp{position:absolute;opacity:0;width:1px;height:1px;top:0;left:0;pointer-events:none;}
+.nname{font-size:13px;font-weight:500;flex:1;}
+.ncount{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);background:var(--surface2);padding:2px 6px;border-radius:20px;}
+.hint{font-size:10px;color:var(--muted);padding:4px 9px 8px;}
+.zip-group{margin-bottom:8px;}
+.zip-ghdr{display:flex;align-items:center;justify-content:space-between;padding:6px 9px;background:var(--surface2);border-radius:8px 8px 0 0;border:1px solid var(--border);}
+.zip-ghdr.solo{border-radius:8px;}
+.zip-gchildren{border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;overflow:hidden;}
+.pin-entry{display:flex;align-items:center;justify-content:space-between;padding:6px 9px 6px 18px;background:var(--surface3);border-bottom:1px solid var(--border);}
+.pin-entry:last-child{border-bottom:none;}
+.pin-entry:hover{background:var(--surface2);}
+.rm{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;padding:0 2px;transition:color .15s;}
+.rm:hover{color:var(--danger);}
+.nbadge{display:inline-block;background:var(--warning);color:#0f1117;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;margin-left:5px;vertical-align:middle;}
+.empty{text-align:center;padding:24px 16px;color:var(--muted);font-size:12px;line-height:1.7;}
+#map{flex:1;height:100%;}
+.tt{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;min-width:240px;max-width:290px;box-shadow:0 8px 32px rgba(0,0,0,.6);z-index:9999;pointer-events:all;display:none;}
+.tt.visible{display:block;}
+.tt-zip{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;margin-bottom:2px;}
+.tt-nbhd{font-size:13px;font-weight:500;color:var(--warning);margin-bottom:3px;}
+.tt-nurse{font-size:13px;color:var(--muted);margin-bottom:10px;}
+.tt-nurse strong{color:var(--text);}
+.tt-crow{display:flex;align-items:center;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
+.tt-crow label{font-size:11px;color:var(--muted);white-space:nowrap;margin-right:2px;}
+.tt-sw{width:16px;height:16px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:border-color .12s,transform .1s;flex-shrink:0;}
+.tt-sw:hover{transform:scale(1.25);}
+.tt-sw.active{border-color:#fff;}
+.tt-cp{-webkit-appearance:none;appearance:none;width:24px;height:18px;border:2px solid var(--border);border-radius:5px;background:none;cursor:pointer;padding:1px;flex-shrink:0;}
+.tt-cp::-webkit-color-swatch-wrapper{padding:0;}
+.tt-cp::-webkit-color-swatch{border:none;border-radius:2px;}
+.tt-erow{display:flex;gap:7px;}
+.tt-erow .txt{font-size:12px;padding:6px 10px;}
+.save-btn{background:var(--success);color:#0f1117;border:none;padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;}
+.rm-nurse-btn{background:var(--danger);color:#fff;border:none;padding:6px 11px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;margin-top:6px;width:100%;}
+.tt-close{position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;line-height:1;}
+.status-bar{padding:5px 16px;background:var(--surface);border-top:1px solid var(--border);font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;flex-shrink:0;}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <h1>&#x1F5FA; Nurse Territory Map</h1>
+    <div class="map-tabs">
+      <button class="map-tab active" id="tabMap1" onclick="switchMap('map1')">Territory View</button>
+      <button class="map-tab" id="tabMap2" onclick="switchMap('map2')">Current Nurse Map</button>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="hdr-btn" onclick="saveData()">&#x1F4BE; Save JSON</button>
+    <button class="hdr-btn" onclick="openLoadModal()">&#x1F4C2; Load JSON</button>
+    <div class="hdr-div"></div>
+    <button class="hdr-btn export" onclick="exportHTML()">&#x1F4E4; Export HTML</button>
+  </div>
+</header>
+
+<div class="modal-overlay" id="loadModal">
+  <div class="modal">
+    <h3>&#x1F4C2; Load Saved Data</h3>
+    <p>Paste your saved JSON below then click Load.</p>
+    <textarea id="loadTxt" placeholder="Paste JSON here..."></textarea>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeLoad()">Cancel</button>
+      <button class="modal-btn primary" onclick="loadFromModal()">Load Pins</button>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <h2>Add Pin</h2>
+      <div class="mode-toggle">
+        <button class="mode-btn active" id="modeZip" onclick="setMode('zip')">&#x1F4CD; Zip Code</button>
+        <button class="mode-btn" id="modeNbhd" onclick="setMode('nbhd')">&#x1F3D8; Neighborhood</button>
+      </div>
+      <div id="formZip">
+        <div class="input-row">
+          <input class="txt" type="text" id="zipInput" placeholder="e.g. 15601" maxlength="5"/>
+          <button class="add-btn" onclick="addZip()">Pin</button>
+        </div>
+        <label class="field-label">Assign Nurse</label>
+        <input class="txt" type="text" id="nurseZip" placeholder="Nurse name"/>
+        <label class="field-label">Pin Color</label>
+        <div class="color-row">
+          <input type="color" id="mainCP" value="#5c7cfa" oninput="onMainCP()"/>
+          <div class="swatches" id="mainSw"></div>
+        </div>
+      </div>
+      <div id="formNbhd" style="display:none">
+        <div class="nbhd-section">
+          <div class="nbhd-title">&#x1F3D8; Neighborhood Pin</div>
+          <label class="field-label" style="margin-top:0">Zip Code</label>
+          <input class="txt" type="text" id="nbhdZip" placeholder="e.g. 15601" maxlength="5"/>
+          <label class="field-label">Neighborhood Name</label>
+          <input class="txt" type="text" id="nbhdName" placeholder="e.g. Greensburg Heights"/>
+          <label class="field-label">Assign Nurse</label>
+          <input class="txt" type="text" id="nbhdNurse" placeholder="Nurse name"/>
+          <label class="field-label">Pin Color</label>
+          <div class="color-row">
+            <input type="color" id="nbhdCP" value="#ffd43b" oninput="onNbhdCP()"/>
+            <div class="swatches" id="nbhdSw"></div>
+          </div>
+          <div style="margin-top:10px">
+            <button class="add-btn" onclick="addNbhd()" style="width:100%">Pin Neighborhood</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tab-row">
+      <button class="tab active" onclick="switchTab(event,'nurses')">Nurses</button>
+      <button class="tab" onclick="switchTab(event,'zips')">Territories</button>
+    </div>
+    <div class="tab-content active" id="tab-nurses">
+      <div class="scroll-list" id="nurseList"><div class="empty">Loading...</div></div>
+    </div>
+    <div class="tab-content" id="tab-zips">
+      <div class="scroll-list" id="zipList"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+<div class="status-bar" id="statusBar">Initializing...</div>
+
+<div class="tt" id="tt">
+  <button class="tt-close" id="ttCloseBtn">&#x2715;</button>
+  <div class="tt-zip" id="tt-zip"></div>
+  <div class="tt-nbhd" id="tt-nbhd" style="display:none"></div>
+  <div class="tt-nurse" id="tt-nurse"></div>
+  <div class="tt-crow">
+    <label>Color</label>
+    <div id="ttSw" style="display:flex;gap:4px;flex-wrap:wrap;flex:1;"></div>
+    <input type="color" class="tt-cp" id="ttCP" oninput="onTtCP()"/>
+  </div>
+  <div class="tt-erow">
+    <input class="txt" type="text" id="tt-edit" placeholder="Reassign nurse"/>
+    <button class="save-btn" id="ttSaveBtn">Save</button>
+  </div>
+  <button class="rm-nurse-btn" id="ttRmBtn">Remove this nurse from zip</button>
+</div>
+
+<script>
+// All nurse/zip data — NO baked coordinates, all geocoded live via Google Maps API
+var PRELOAD = {"nurses":{"Annie":"#ff6b6b","Sandy":"#69db7c","Amanda":"#5c7cfa","Allison":"#cc5de8","Apel":"#f06595","Daryann":"#ffd43b","Ashley":"#63e6be","Lori":"#74c0fc","Connie":"#ff922b","Annie/Sandy":"#ff8787","Allison/Connie":"#e599f7","Daryann/Amanda":"#a9e34b","Allison/Daryann":"#ffe066"},"zipData":{"15083":{"nurses":[{"nurse":"Annie","color":"#ff6b6b"}],"neighborhoods":{}},"15089":{"nurses":[{"nurse":"Annie","color":"#ff6b6b"}],"neighborhoods":{}},"15425":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{"n1":{"name":"South Connellsville","nurse":"Daryann","color":"#ffd43b"}}},"15446":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15462":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15469":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15479":{"nurses":[{"nurse":"Allison","color":"#cc5de8"}],"neighborhoods":{}},"15490":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15601":{"nurses":[],"neighborhoods":{"n2":{"name":"West Point","nurse":"Apel","color":"#f06595"},"n3":{"name":"Hannastown","nurse":"Ashley","color":"#63e6be"},"n4":{"name":"Business 66","nurse":"Sandy","color":"#69db7c"},"n5":{"name":"Pitt Greensburg Campus","nurse":"Sandy","color":"#69db7c"},"n6":{"name":"Westmoreland Mall","nurse":"Sandy","color":"#69db7c"},"n7":{"name":"Fort Allen","nurse":"Allison","color":"#cc5de8"},"n8":{"name":"South Greensburg","nurse":"Allison","color":"#cc5de8"},"n9":{"name":"Downtown","nurse":"Apel","color":"#f06595"}}},"15610":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15611":{"nurses":[{"nurse":"Annie","color":"#ff6b6b"}],"neighborhoods":{}},"15612":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{}},"15616":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{}},"15617":{"nurses":[{"nurse":"Allison","color":"#cc5de8"}],"neighborhoods":{}},"15619":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15620":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15621":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15623":{"nurses":[{"nurse":"Sandy","color":"#69db7c"}],"neighborhoods":{}},"15624":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15626":{"nurses":[{"nurse":"Sandy","color":"#69db7c"}],"neighborhoods":{}},"15627":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15628":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15631":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{}},"15632":{"nurses":[{"nurse":"Sandy","color":"#69db7c"}],"neighborhoods":{}},"15633":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15634":{"nurses":[{"nurse":"Lori","color":"#74c0fc"}],"neighborhoods":{}},"15635":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15636":{"nurses":[{"nurse":"Sandy","color":"#69db7c"}],"neighborhoods":{}},"15637":{"nurses":[{"nurse":"Annie","color":"#ff6b6b"}],"neighborhoods":{}},"15638":{"nurses":[{"nurse":"Apel","color":"#f06595"}],"neighborhoods":{}},"15639":{"nurses":[{"nurse":"Allison","color":"#cc5de8"}],"neighborhoods":{}},"15642":{"nurses":[{"nurse":"Annie/Sandy","color":"#ff8787"}],"neighborhoods":{}},"15644":{"nurses":[{"nurse":"Lori","color":"#74c0fc"}],"neighborhoods":{}},"15647":{"nurses":[{"nurse":"Sandy","color":"#69db7c"}],"neighborhoods":{}},"15648":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15650":{"nurses":[{"nurse":"Allison/Connie","color":"#e599f7"}],"neighborhoods":{}},"15655":{"nurses":[{"nurse":"Connie","color":"#ff922b"}],"neighborhoods":{}},"15658":{"nurses":[{"nurse":"Connie","color":"#ff922b"}],"neighborhoods":{}},"15661":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15663":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{}},"15664":{"nurses":[{"nurse":"Apel","color":"#f06595"}],"neighborhoods":{}},"15665":{"nurses":[{"nurse":"Sandy","color":"#69db7c"}],"neighborhoods":{}},"15666":{"nurses":[{"nurse":"Daryann/Amanda","color":"#a9e34b"}],"neighborhoods":{}},"15670":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15671":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15672":{"nurses":[{"nurse":"Allison","color":"#cc5de8"}],"neighborhoods":{}},"15675":{"nurses":[{"nurse":"Annie","color":"#ff6b6b"}],"neighborhoods":{}},"15676":{"nurses":[{"nurse":"Apel","color":"#f06595"}],"neighborhoods":{}},"15678":{"nurses":[{"nurse":"Annie","color":"#ff6b6b"}],"neighborhoods":{}},"15679":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{}},"15683":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{}},"15684":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}},"15687":{"nurses":[{"nurse":"Amanda","color":"#5c7cfa"}],"neighborhoods":{}},"15688":{"nurses":[{"nurse":"Daryann","color":"#ffd43b"}],"neighborhoods":{}},"15692":{"nurses":[{"nurse":"Sandy","color":"#69db7c"}],"neighborhoods":{}},"15693":{"nurses":[{"nurse":"Apel","color":"#f06595"}],"neighborhoods":{}},"15696":{"nurses":[{"nurse":"Apel","color":"#f06595"}],"neighborhoods":{}},"15697":{"nurses":[{"nurse":"Allison","color":"#cc5de8"}],"neighborhoods":{}},"15698":{"nurses":[{"nurse":"Allison/Daryann","color":"#ffe066"}],"neighborhoods":{}},"15717":{"nurses":[{"nurse":"Ashley","color":"#63e6be"}],"neighborhoods":{}}}};
+var PRELOAD_MAP2 = {"nurses":{"Annie":"#ff6b6b","Sandy":"#69db7c","Amanda":"#5c7cfa","Allison":"#cc5de8","Apel":"#f06595","Daryann":"#ffd43b","Ashley":"#63e6be","Lori":"#74c0fc","Connie":"#ff922b"},"zipData":{}};
+var SAVED_MAP_SLOTS = {};
+
+var COLORS=['#5c7cfa','#ff6b6b','#ffd43b','#69db7c','#f06595','#74c0fc','#ff922b','#a9e34b','#e599f7','#63e6be','#ff8787','#ffe066','#40c057','#339af0','#cc5de8'];
+var zipData={},nurses={},map,geocoder,AME;
+var activeTTKey=null,activeTTNurseIdx=0,activeTTMarker=null;
+var selAddColor=COLORS[0],selNbhdColor=COLORS[2],selTtColor=COLORS[0];
+var curMode='zip',nbhdCtr=100,curMap='map1',mapSlots={};
+
+function pieSVG(zip,arr,hollow){
+  var n=arr.length,size=n<=2?52:n<=4?56:60,r=size/2-2,cx=size/2,cy=size/2;
+  var s='<svg xmlns="http://www.w3.org/2000/svg" width="'+size+'" height="'+size+'">';
+  if(n===0){
+    s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#555" stroke="#fff" stroke-width="1.5"/>';
+  }else if(n===1){
+    var c=arr[0].color;
+    if(hollow){
+      s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#1a1d27" fill-opacity="0.95" stroke="'+c+'" stroke-width="4"/>';
+      s+='<text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="9.5" font-weight="700" font-family="monospace" fill="'+c+'">'+zip+'</text>';
+    }else{
+      s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+c+'" fill-opacity="0.95" stroke="rgba(255,255,255,0.4)" stroke-width="1.5"/>';
+      s+='<text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="9.5" font-weight="700" font-family="monospace" fill="#fff">'+zip+'</text>';
+    }
+  }else{
+    var sa=360/n;
+    for(var i=0;i<n;i++){
+      var a1=i*sa-90,a2=a1+sa;
+      var x1=cx+r*Math.cos(a1*Math.PI/180),y1=cy+r*Math.sin(a1*Math.PI/180);
+      var x2=cx+r*Math.cos(a2*Math.PI/180),y2=cy+r*Math.sin(a2*Math.PI/180);
+      var lg=sa>180?1:0,c=arr[i].color;
+      if(hollow){
+        s+='<path d="M'+cx+','+cy+' L'+x1+','+y1+' A'+r+','+r+' 0 '+lg+',1 '+x2+','+y2+' Z" fill="#1a1d27" fill-opacity="0.92" stroke="'+c+'" stroke-width="2.5"/>';
+      }else{
+        s+='<path d="M'+cx+','+cy+' L'+x1+','+y1+' A'+r+','+r+' 0 '+lg+',1 '+x2+','+y2+' Z" fill="'+c+'" fill-opacity="0.93" stroke="#1a1d27" stroke-width="1.5"/>';
+      }
+    }
+    s+='<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/>';
+    s+='<circle cx="'+cx+'" cy="'+cy+'" r="11" fill="rgba(0,0,0,0.45)"/>';
+    s+='<text x="'+cx+'" y="'+(cy+3.5)+'" text-anchor="middle" font-size="7" font-weight="700" font-family="monospace" fill="#fff">'+zip.slice(1)+'</text>';
+  }
+  return 'data:image/svg+xml;base64,'+btoa(s+'</svg>');
+}
+
+function nbhdSVG(color,hollow){
+  var bg=hollow?'#1a1d27':color,ring=hollow?color:'rgba(255,255,255,0.5)',sw=hollow?3:1.5;
+  var s='<svg xmlns="http://www.w3.org/2000/svg" width="26" height="34"><path d="M13,32 C13,32 2,20 2,12 A11,11 0 0,1 24,12 C24,20 13,32 13,32Z" fill="'+bg+'" fill-opacity="0.95" stroke="'+ring+'" stroke-width="'+sw+'"/></svg>';
+  return 'data:image/svg+xml;base64,'+btoa(s);
+}
+
+function mkImg(src,w,h){var i=document.createElement('img');i.src=src;i.width=w;i.height=h;i.style.cursor='pointer';return i;}
+
+function mkZipMarker(zip,arr,loc){
+  var h=curMap==='map2',sz=arr.length<=2?52:arr.length<=4?56:60;
+  var m=new AME({position:loc,map:map,title:zip,content:mkImg(pieSVG(zip,arr,h),sz,sz),zIndex:10});
+  m.addListener('click',(function(z,mk){return function(){showTT(z,0,mk);};})(zip,m));
+  m.addListener('mouseover',(function(z,mk){return function(){showTT(z,0,mk);};})(zip,m));
+  return m;
+}
+
+function mkNbhdMarker(name,zip,color,loc,nid){
+  var h=curMap==='map2';
+  var m=new AME({position:loc,map:map,title:name+' ('+zip+')',content:mkImg(nbhdSVG(color,h),26,34),zIndex:5});
+  m.addListener('click',(function(z,id,mk){return function(){showTTNbhd(z,id,mk);};})(zip,nid,m));
+  m.addListener('mouseover',(function(z,id,mk){return function(){showTTNbhd(z,id,mk);};})(zip,nid,m));
+  return m;
+}
+
+function refreshZipMarker(zip){
+  var z=zipData[zip];if(!z||!z.loc)return;
+  if(z.marker)z.marker.map=null;
+  z.marker=z.nurses.length?mkZipMarker(zip,z.nurses,z.loc):null;
+}
+function refreshNbhdMarker(zip,nid){
+  var n=zipData[zip].neighborhoods[nid];if(!n||!n.loc)return;
+  if(n.marker)n.marker.map=null;
+  n.marker=mkNbhdMarker(n.name,zip,n.color,n.loc,nid);
+}
+
+function geocodeZip(zip,cb){
+  geocoder.geocode({address:zip+', PA, USA',componentRestrictions:{country:'US',postalCode:zip}},function(res,st){
+    if(st==='OK'&&res[0])cb(res[0].geometry.location);
+    else cb(null);
+  });
+}
+
+function initMap(){
+  setStatus('Map loading...');
+  AME=google.maps.marker.AdvancedMarkerElement;
+  map=new google.maps.Map(document.getElementById('map'),{
+    center:{lat:40.18,lng:-79.58},zoom:10,
+    mapId:'549438cb036f3182dca129ce',
+    zoomControl:true,mapTypeControl:false,streetViewControl:false,fullscreenControl:true
+  });
+  geocoder=new google.maps.Geocoder();
+  buildSw('mainSw',selAddColor,function(c){selAddColor=c;document.getElementById('mainCP').value=c;});
+  buildSw('nbhdSw',selNbhdColor,function(c){selNbhdColor=c;document.getElementById('nbhdCP').value=c;});
+  if(SAVED_MAP_SLOTS&&Object.keys(SAVED_MAP_SLOTS).length)Object.assign(mapSlots,SAVED_MAP_SLOTS);
+  setTimeout(function(){bootPreload(PRELOAD);},200);
+}
+
+// Boot geocodes every zip fresh via Google Maps API
+function bootPreload(p){
+  if(!p)return;
+  Object.assign(nurses,p.nurses||{});
+  var zd=p.zipData||{};
+  var zips=Object.keys(zd);
+  var total=zips.length,done=0,placed=0;
+  var bounds=new google.maps.LatLngBounds(),hasAny=false;
+
+  // Initialize all zipData entries first
+  zips.forEach(function(z){
+    var zv=zd[z],na=zv.nurses||[];
+    na.forEach(function(ne){if(ne.nurse)nurses[ne.nurse]=ne.color;});
+    zipData[z]={nurses:na,marker:null,loc:null,neighborhoods:{}};
+    // Init neighborhoods without locations (will geocode via zip centroid)
+    for(var nid in(zv.neighborhoods||{})){
+      var nv=zv.neighborhoods[nid];
+      zipData[z].neighborhoods[nid]={name:nv.name,nurse:nv.nurse,color:nv.color,marker:null,loc:null};
+    }
+  });
+
+  setStatus('Geocoding '+total+' zip codes...');
+
+  function oneDone(){
+    done++;
+    setStatus('Geocoding... '+done+'/'+total);
+    if(done===total){
+      mapSlots[curMap]=serialize();
+      if(typeof PRELOAD_MAP2!=='undefined')mapSlots['map2']=PRELOAD_MAP2;
+      if(hasAny)map.fitBounds(bounds);
+      renderNurses();renderZips();
+      setStatus('\u2713 '+placed+' pins loaded!');
+    }
+  }
+
+  zips.forEach(function(zip){
+    geocodeZip(zip,function(loc){
+      if(loc){
+        zipData[zip].loc=loc;
+        if(zipData[zip].nurses.length){
+          zipData[zip].marker=mkZipMarker(zip,zipData[zip].nurses,loc);
+          bounds.extend(loc);hasAny=true;placed++;
+        }
+        // Place neighborhood markers offset from zip centroid
+        var nbhds=Object.keys(zipData[zip].neighborhoods);
+        nbhds.forEach(function(nid,i){
+          var n=zipData[zip].neighborhoods[nid];
+          var nloc=new google.maps.LatLng(loc.lat()+i*0.005,loc.lng()+i*0.007);
+          n.loc=nloc;
+          n.marker=mkNbhdMarker(n.name,zip,n.color,nloc,nid);
+          bounds.extend(nloc);hasAny=true;placed++;
+        });
+      }
+      oneDone();
+    });
+  });
+
+  if(total===0){
+    renderNurses();renderZips();setStatus('Ready.');
+  }
+}
+
+function switchMap(slot){
+  if(slot===curMap)return;
+  mapSlots[curMap]=serialize();
+  clearAll();zipData={};nurses={};
+  curMap=slot;
+  document.getElementById('tabMap1').classList.toggle('active',slot==='map1');
+  document.getElementById('tabMap2').classList.toggle('active',slot==='map2');
+  var saved=mapSlots[slot];
+  if(slot==='map2'&&typeof PRELOAD_MAP2!=='undefined')Object.assign(nurses,PRELOAD_MAP2.nurses||{});
+  if(!saved||!Object.keys(saved.zipData||{}).length){renderNurses();renderZips();setStatus(slot==='map2'?'Current Nurse Map':'Territory View');return;}
+  Object.assign(nurses,saved.nurses||{});
+  var bounds=new google.maps.LatLngBounds(),hasAny=false;
+  var zips=Object.keys(saved.zipData||{});
+  var total=zips.length,done=0;
+
+  zips.forEach(function(zip){
+    var z=saved.zipData[zip],na=z.nurses||[];
+    zipData[zip]={nurses:na,marker:null,loc:null,neighborhoods:{}};
+    for(var nid in(z.neighborhoods||{})){
+      var nv=z.neighborhoods[nid];
+      zipData[zip].neighborhoods[nid]={name:nv.name,nurse:nv.nurse,color:nv.color,marker:null,loc:null};
+    }
+  });
+
+  if(total===0){renderNurses();renderZips();setStatus('\u2713 Switched.');return;}
+  setStatus('Loading map...');
+
+  zips.forEach(function(zip){
+    var z=saved.zipData[zip],na=z.nurses||[];
+    geocodeZip(zip,function(loc){
+      done++;
+      if(loc){
+        zipData[zip].loc=loc;
+        if(na.length){zipData[zip].marker=mkZipMarker(zip,na,loc);bounds.extend(loc);hasAny=true;}
+        var nbhds=Object.keys(zipData[zip].neighborhoods);
+        nbhds.forEach(function(nid,i){
+          var n=zipData[zip].neighborhoods[nid];
+          var nloc=new google.maps.LatLng(loc.lat()+i*0.005,loc.lng()+i*0.007);
+          n.loc=nloc;n.marker=mkNbhdMarker(n.name,zip,n.color,nloc,nid);
+          bounds.extend(nloc);hasAny=true;
+        });
+      }
+      if(done===total){
+        if(hasAny)map.fitBounds(bounds);
+        renderNurses();renderZips();
+        setStatus('\u2713 Switched to '+(slot==='map1'?'Territory View':'Current Nurse Map'));
+      }
+    });
+  });
+}
+
+function clearAll(){
+  for(var z in zipData){
+    if(zipData[z].marker)zipData[z].marker.map=null;
+    for(var n in zipData[z].neighborhoods){if(zipData[z].neighborhoods[n].marker)zipData[z].neighborhoods[n].marker.map=null;}
+  }
+}
+
+function setMode(m){
+  curMode=m;
+  document.getElementById('formZip').style.display=m==='zip'?'':'none';
+  document.getElementById('formNbhd').style.display=m==='nbhd'?'':'none';
+  document.getElementById('modeZip').classList.toggle('active',m==='zip');
+  document.getElementById('modeNbhd').classList.toggle('active',m==='nbhd');
+}
+
+function buildSw(id,active,cb){
+  var el=document.getElementById(id);el.innerHTML='';
+  COLORS.forEach(function(c){
+    var s=document.createElement('div');s.className='swatch'+(c===active?' active':'');s.style.background=c;
+    s.addEventListener('click',function(){el.querySelectorAll('.swatch').forEach(function(x){x.classList.remove('active');});s.classList.add('active');cb(c);});
+    el.appendChild(s);
+  });
+}
+function buildTtSw(active){
+  var el=document.getElementById('ttSw');el.innerHTML='';
+  COLORS.forEach(function(c){
+    var s=document.createElement('div');s.className='tt-sw'+(c===active?' active':'');s.style.background=c;
+    s.addEventListener('click',function(){el.querySelectorAll('.tt-sw').forEach(function(x){x.classList.remove('active');});s.classList.add('active');selTtColor=c;document.getElementById('ttCP').value=c;applyTtColor(c);});
+    el.appendChild(s);
+  });
+}
+function onMainCP(){selAddColor=document.getElementById('mainCP').value;document.querySelectorAll('#mainSw .swatch').forEach(function(s){s.classList.remove('active');});}
+function onNbhdCP(){selNbhdColor=document.getElementById('nbhdCP').value;document.querySelectorAll('#nbhdSw .swatch').forEach(function(s){s.classList.remove('active');});}
+function onTtCP(){selTtColor=document.getElementById('ttCP').value;document.querySelectorAll('#ttSw .tt-sw').forEach(function(s){s.classList.remove('active');});applyTtColor(selTtColor);}
+function getNurseColor(name){return nurses[name]||(PRELOAD.nurses&&PRELOAD.nurses[name])||(PRELOAD_MAP2.nurses&&PRELOAD_MAP2.nurses[name])||selAddColor;}
+
+function addZip(){
+  var zip=document.getElementById('zipInput').value.trim();
+  var nurse=document.getElementById('nurseZip').value.trim();
+  if(!/^\d{5}$/.test(zip)){setStatus('\u26a0 Enter a valid 5-digit zip');return;}
+  if(!nurse){setStatus('\u26a0 Enter a nurse name');return;}
+  var color=getNurseColor(nurse);nurses[nurse]=color;
+  if(zipData[zip]&&zipData[zip].nurses&&zipData[zip].nurses.some(function(ne){return ne.nurse===nurse;})){setStatus('\u26a0 '+nurse+' already in '+zip);return;}
+  function place(loc){
+    if(!zipData[zip])zipData[zip]={nurses:[],marker:null,loc:loc,neighborhoods:{}};
+    zipData[zip].loc=loc;
+    zipData[zip].nurses.push({nurse:nurse,color:color});
+    refreshZipMarker(zip);renderNurses();renderZips();
+    document.getElementById('zipInput').value='';
+    setStatus('\u2713 Pinned '+zip+' \u2192 '+nurse);
+  }
+  if(zipData[zip]&&zipData[zip].loc){place(zipData[zip].loc);return;}
+  setStatus('Locating '+zip+'...');
+  geocodeZip(zip,function(loc){
+    if(!loc){setStatus('\u2717 Could not find '+zip);return;}
+    place(loc);
+  });
+}
+
+function addNbhd(){
+  var zip=document.getElementById('nbhdZip').value.trim();
+  var name=document.getElementById('nbhdName').value.trim();
+  var nurse=document.getElementById('nbhdNurse').value.trim();
+  if(!/^\d{5}$/.test(zip)){setStatus('\u26a0 Enter a valid zip');return;}
+  if(!name){setStatus('\u26a0 Enter a neighborhood name');return;}
+  if(!nurse){setStatus('\u26a0 Enter a nurse name');return;}
+  var color=getNurseColor(nurse);nurses[nurse]=color;
+  function placeNbhd(baseLoc){
+    var ct=zipData[zip]?Object.keys(zipData[zip].neighborhoods).length:0;
+    var loc=new google.maps.LatLng(baseLoc.lat()+ct*0.005,baseLoc.lng()+ct*0.007);
+    var nid='n'+(++nbhdCtr);
+    if(!zipData[zip])zipData[zip]={nurses:[],marker:null,loc:baseLoc,neighborhoods:{}};
+    zipData[zip].neighborhoods[nid]={name:name,nurse:nurse,color:color,marker:mkNbhdMarker(name,zip,color,loc,nid),loc:loc};
+    renderNurses();renderZips();
+    document.getElementById('nbhdName').value='';document.getElementById('nbhdNurse').value='';
+    setStatus('\u2713 Pinned '+name+' ('+zip+') \u2192 '+nurse);
+  }
+  if(zipData[zip]&&zipData[zip].loc){placeNbhd(zipData[zip].loc);return;}
+  setStatus('Locating '+zip+'...');
+  geocodeZip(zip,function(loc){
+    if(!loc){setStatus('\u2717 Could not find '+zip);return;}
+    if(!zipData[zip])zipData[zip]={nurses:[],marker:null,loc:null,neighborhoods:{}};
+    zipData[zip].loc=loc;placeNbhd(loc);
+  });
+}
+
+function getMarkerXY(marker){
+  var proj=map.getProjection();
+  var p=marker.position;
+  var pos=(p instanceof google.maps.LatLng)?p:new google.maps.LatLng(p.lat,p.lng);
+  var pt=proj.fromLatLngToPoint(pos);
+  var ne=proj.fromLatLngToPoint(map.getBounds().getNorthEast());
+  var sw=proj.fromLatLngToPoint(map.getBounds().getSouthWest());
+  var scale=Math.pow(2,map.getZoom());
+  var mr=document.getElementById('map').getBoundingClientRect();
+  return{x:mr.left+(pt.x-sw.x)*scale,y:mr.top+(pt.y-ne.y)*scale};
+}
+function positionTT(xy){
+  var tt=document.getElementById('tt');
+  tt.style.display='block';tt.classList.add('visible');
+  var x=xy.x+30,y=xy.y-40;
+  if(x+300>window.innerWidth)x-=320;
+  if(y+300>window.innerHeight)y-=300;
+  if(y<0)y=10;
+  tt.style.left=x+'px';tt.style.top=y+'px';
+}
+function showTT(zip,nurseIdx,marker){
+  activeTTKey=zip;activeTTNurseIdx=nurseIdx;activeTTMarker=marker;
+  var z=zipData[zip],ne=z.nurses[nurseIdx]||z.nurses[0];
+  selTtColor=ne?ne.color:'#ffffff';
+  document.getElementById('tt-zip').textContent=zip;
+  document.getElementById('tt-nbhd').style.display='none';
+  var h='Nurse: <strong style="color:'+(ne?ne.color:'#fff')+'">'+(ne?ne.nurse:'?')+'</strong>';
+  if(z.nurses.length>1)h+=' <span style="color:var(--muted);font-size:11px">'+(nurseIdx+1)+'/'+z.nurses.length+' \u2014 click to cycle</span>';
+  document.getElementById('tt-nurse').innerHTML=h;
+  document.getElementById('tt-edit').value='';
+  document.getElementById('ttCP').value=selTtColor;
+  document.getElementById('ttRmBtn').style.display='';
+  buildTtSw(selTtColor);positionTT(getMarkerXY(marker));
+  if(z.nurses.length>1){
+    google.maps.event.clearListeners(marker,'click');
+    marker.addListener('click',(function(z,m){return function(){showTT(z,(activeTTNurseIdx+1)%zipData[z].nurses.length,m);};})(zip,marker));
+  }
+}
+function showTTNbhd(zip,nid,marker){
+  activeTTKey=zip+'::'+nid;activeTTMarker=marker;
+  var n=zipData[zip].neighborhoods[nid];selTtColor=n.color;
+  document.getElementById('tt-zip').textContent=zip;
+  var el=document.getElementById('tt-nbhd');el.textContent=n.name;el.style.display='';
+  document.getElementById('tt-nurse').innerHTML='Nurse: <strong style="color:'+n.color+'">'+n.nurse+'</strong>';
+  document.getElementById('tt-edit').value='';
+  document.getElementById('ttCP').value=selTtColor;
+  document.getElementById('ttRmBtn').style.display='none';
+  buildTtSw(selTtColor);positionTT(getMarkerXY(marker));
+}
+function closeTT(){var tt=document.getElementById('tt');tt.classList.remove('visible');tt.style.display='none';activeTTKey=null;}
+function applyTtColor(color){
+  if(!activeTTKey)return;
+  if(activeTTKey.indexOf('::')>-1){
+    var p=activeTTKey.split('::'),zip=p[0],nid=p[1];
+    zipData[zip].neighborhoods[nid].color=color;nurses[zipData[zip].neighborhoods[nid].nurse]=color;
+    refreshNbhdMarker(zip,nid);
+  }else{
+    zipData[activeTTKey].nurses[activeTTNurseIdx].color=color;
+    nurses[zipData[activeTTKey].nurses[activeTTNurseIdx].nurse]=color;
+    refreshZipMarker(activeTTKey);
+  }
+  renderNurses();renderZips();
+}
+function saveTT(){
+  var newNurse=document.getElementById('tt-edit').value.trim();
+  if(!newNurse||!activeTTKey)return;
+  var c2=getNurseColor(newNurse);nurses[newNurse]=c2;
+  if(activeTTKey.indexOf('::')>-1){
+    var p=activeTTKey.split('::'),zip=p[0],nid=p[1];
+    var old=zipData[zip].neighborhoods[nid].nurse;
+    zipData[zip].neighborhoods[nid].nurse=newNurse;zipData[zip].neighborhoods[nid].color=c2;
+    refreshNbhdMarker(zip,nid);cleanNurse(old);
+    showTTNbhd(zip,nid,zipData[zip].neighborhoods[nid].marker);
+  }else{
+    var zip=activeTTKey,old=zipData[zip].nurses[activeTTNurseIdx].nurse;
+    zipData[zip].nurses[activeTTNurseIdx]={nurse:newNurse,color:c2};
+    refreshZipMarker(zip);cleanNurse(old);
+    showTT(zip,activeTTNurseIdx,zipData[zip].marker);
+  }
+  renderNurses();renderZips();setStatus('\u2713 Reassigned \u2192 '+newNurse);
+}
+function removeTTNurse(){
+  if(!activeTTKey||activeTTKey.indexOf('::')>-1)return;
+  var zip=activeTTKey,old=zipData[zip].nurses[activeTTNurseIdx].nurse;
+  zipData[zip].nurses.splice(activeTTNurseIdx,1);
+  refreshZipMarker(zip);
+  if(!zipData[zip].marker&&!Object.keys(zipData[zip].neighborhoods).length)delete zipData[zip];
+  cleanNurse(old);closeTT();renderNurses();renderZips();setStatus('\u2713 Removed '+old+' from '+zip);
+}
+function cleanNurse(name){
+  if(!name)return;
+  var used=false;
+  for(var z in zipData){
+    if(zipData[z].nurses.some(function(ne){return ne.nurse===name;})){used=true;break;}
+    for(var n in zipData[z].neighborhoods){if(zipData[z].neighborhoods[n].nurse===name){used=true;break;}}
+    if(used)break;
+  }
+  if(!used)delete nurses[name];
+}
+function renderNurses(){
+  var el=document.getElementById('nurseList'),names=Object.keys(nurses);
+  el.innerHTML='';
+  if(!names.length){el.innerHTML='<div class="empty">No nurses yet.</div>';return;}
+  var counts={};
+  for(var z in zipData){
+    zipData[z].nurses.forEach(function(ne){counts[ne.nurse]=(counts[ne.nurse]||0)+1;});
+    for(var n in zipData[z].neighborhoods)counts[zipData[z].neighborhoods[n].nurse]=(counts[zipData[z].neighborhoods[n].nurse]||0)+1;
+  }
+  var hint=document.createElement('div');hint.className='hint';hint.textContent='Click color dot to change nurse color';el.appendChild(hint);
+  names.forEach(function(name){
+    var row=document.createElement('div');row.className='nurse-item';
+    var wrap=document.createElement('div');wrap.className='ndot-wrap';
+    var dot=document.createElement('div');dot.className='ndot';dot.style.background=nurses[name];dot.title='Change color';
+    var cp=document.createElement('input');cp.type='color';cp.className='ncp';cp.value=nurses[name];
+    dot.addEventListener('click',function(){cp.click();});
+    cp.addEventListener('input',function(){applyNurseColor(name,cp.value);});
+    wrap.appendChild(dot);wrap.appendChild(cp);
+    var nm=document.createElement('div');nm.className='nname';nm.textContent=name;
+    var ct=document.createElement('div');ct.className='ncount';ct.textContent=(counts[name]||0)+' pin'+((counts[name]||0)===1?'':'s');
+    row.appendChild(wrap);row.appendChild(nm);row.appendChild(ct);el.appendChild(row);
+  });
+}
+function applyNurseColor(name,color){
+  nurses[name]=color;
+  for(var zip in zipData){
+    var changed=false;
+    zipData[zip].nurses.forEach(function(ne){if(ne.nurse===name){ne.color=color;changed=true;}});
+    if(changed)refreshZipMarker(zip);
+    for(var nid in zipData[zip].neighborhoods){
+      if(zipData[zip].neighborhoods[nid].nurse===name){zipData[zip].neighborhoods[nid].color=color;refreshNbhdMarker(zip,nid);}
+    }
+  }
+  renderNurses();renderZips();
+}
+function renderZips(){
+  var el=document.getElementById('zipList'),zips=Object.keys(zipData);
+  el.innerHTML='';
+  if(!zips.length){el.innerHTML='<div class="empty">No pins yet.</div>';return;}
+  zips.sort(function(a,b){
+    var na=(zipData[a].nurses[0]?zipData[a].nurses[0].nurse:'zzz').toLowerCase();
+    var nb=(zipData[b].nurses[0]?zipData[b].nurses[0].nurse:'zzz').toLowerCase();
+    return na<nb?-1:na>nb?1:a<b?-1:1;
+  });
+  zips.forEach(function(zip){
+    var z=zipData[zip],nb=Object.entries(z.neighborhoods||{}),hasP=!!z.marker;
+    if(!hasP&&!nb.length)return;
+    var grp=document.createElement('div');grp.className='zip-group';
+    var hdr=document.createElement('div');hdr.className='zip-ghdr'+(nb.length?'':' solo');
+    var left=document.createElement('div');
+    var zspan=document.createElement('span');zspan.style.cssText='font-family:DM Mono,monospace;font-weight:600;font-size:13px;';zspan.textContent=zip;left.appendChild(zspan);
+    if(hasP&&z.nurses.length){
+      var dots=document.createElement('span');dots.style.cssText='margin-left:6px;display:inline-flex;gap:3px;vertical-align:middle;';
+      z.nurses.forEach(function(ne){var d=document.createElement('span');d.style.cssText='display:inline-block;width:9px;height:9px;border-radius:50%;background:'+ne.color;d.title=ne.nurse;dots.appendChild(d);});
+      left.appendChild(dots);
+    }
+    if(nb.length){var badge=document.createElement('span');badge.className='nbadge';badge.textContent=nb.length;left.appendChild(badge);}
+    hdr.appendChild(left);
+    var right=document.createElement('div');right.style.cssText='font-size:11px;color:var(--muted)';
+    if(hasP&&z.nurses.length)right.textContent=z.nurses.map(function(ne){return ne.nurse;}).join(', ');
+    hdr.appendChild(right);grp.appendChild(hdr);
+    if(nb.length){
+      var kids=document.createElement('div');kids.className='zip-gchildren';
+      nb.forEach(function(e){
+        var id=e[0],n=e[1];
+        var row=document.createElement('div');row.className='pin-entry';
+        var info=document.createElement('div');
+        var nm=document.createElement('div');nm.style.cssText='font-size:12px;font-weight:500;color:'+n.color;nm.textContent='\uD83D\uDD37 '+n.name;
+        var nr=document.createElement('div');nr.style.cssText='font-size:11px;color:var(--muted)';nr.textContent=n.nurse;
+        info.appendChild(nm);info.appendChild(nr);
+        var btn=document.createElement('button');btn.className='rm';btn.textContent='\u00d7';
+        btn.addEventListener('click',(function(z,i){return function(){rmNbhd(z,i);};})(zip,id));
+        row.appendChild(info);row.appendChild(btn);kids.appendChild(row);
+      });
+      grp.appendChild(kids);
+    }
+    el.appendChild(grp);
+  });
+}
+function rmNbhd(zip,nid){
+  if(!zipData[zip]||!zipData[zip].neighborhoods[nid])return;
+  var nurse=zipData[zip].neighborhoods[nid].nurse;
+  if(zipData[zip].neighborhoods[nid].marker)zipData[zip].neighborhoods[nid].marker.map=null;
+  delete zipData[zip].neighborhoods[nid];
+  if(!zipData[zip].marker&&!Object.keys(zipData[zip].neighborhoods).length)delete zipData[zip];
+  cleanNurse(nurse);closeTT();renderNurses();renderZips();setStatus('Removed neighborhood');
+}
+function serialize(){
+  var out={nurses:{},zipData:{}};
+  for(var n in nurses)out.nurses[n]=nurses[n];
+  for(var zip in zipData){
+    var z=zipData[zip];
+    out.zipData[zip]={nurses:z.nurses.slice(),neighborhoods:{}};
+    for(var nid in z.neighborhoods){
+      var n=z.neighborhoods[nid];
+      out.zipData[zip].neighborhoods[nid]={name:n.name,nurse:n.nurse,color:n.color};
+    }
+  }
+  return out;
+}
+function saveData(){
+  var p=serialize();
+  if(!Object.keys(p.zipData).length){setStatus('\u26a0 No pins to save');return;}
+  var b=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='nurse_map_data.json';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);setStatus('\u2713 Saved JSON');
+}
+function openLoadModal(){document.getElementById('loadModal').classList.add('visible');document.getElementById('loadTxt').value='';}
+function closeLoad(){document.getElementById('loadModal').classList.remove('visible');}
+function loadFromModal(){
+  var raw=document.getElementById('loadTxt').value.trim();if(!raw)return;
+  var payload;try{payload=JSON.parse(raw);}catch(e){setStatus('\u2717 Invalid JSON');return;}
+  clearAll();zipData={};nurses={};
+  if(payload.nurses)Object.assign(nurses,payload.nurses);
+  var zips=Object.keys(payload.zipData||{});
+  var total=zips.length,done=0,count=0;
+  var bounds=new google.maps.LatLngBounds(),hasAny=false;
+  zips.forEach(function(zip){
+    var z=payload.zipData[zip],na=z.nurses||[];
+    zipData[zip]={nurses:na,marker:null,loc:null,neighborhoods:{}};
+    for(var nid in(z.neighborhoods||{})){
+      var nv=z.neighborhoods[nid];
+      zipData[zip].neighborhoods[nid]={name:nv.name,nurse:nv.nurse,color:nv.color,marker:null,loc:null};
+    }
+  });
+  if(total===0){closeLoad();renderNurses();renderZips();setStatus('Loaded (empty)');return;}
+  setStatus('Loading '+total+' pins...');
+  zips.forEach(function(zip){
+    var na=payload.zipData[zip].nurses||[];
+    geocodeZip(zip,function(loc){
+      done++;
+      if(loc){
+        zipData[zip].loc=loc;
+        if(na.length){zipData[zip].marker=mkZipMarker(zip,na,loc);bounds.extend(loc);hasAny=true;count++;}
+        var nbhds=Object.keys(zipData[zip].neighborhoods);
+        nbhds.forEach(function(nid,i){
+          var n=zipData[zip].neighborhoods[nid];
+          var nloc=new google.maps.LatLng(loc.lat()+i*0.005,loc.lng()+i*0.007);
+          n.loc=nloc;n.marker=mkNbhdMarker(n.name,zip,n.color,nloc,nid);
+          bounds.extend(nloc);hasAny=true;count++;
+        });
+      }
+      if(done===total){
+        if(hasAny)map.fitBounds(bounds);
+        mapSlots[curMap]=serialize();closeLoad();renderNurses();renderZips();
+        setStatus('\u2713 Loaded '+count+' pins');
+      }
+    });
+  });
+}
+function exportHTML(){
+  mapSlots[curMap]=serialize();
+  var html=document.documentElement.outerHTML;
+  var pi=html.indexOf('var PRELOAD = ');
+  if(pi>-1){var pe=html.indexOf(';',pi)+1;html=html.substring(0,pi)+'var PRELOAD = '+JSON.stringify(mapSlots['map1']||serialize())+';'+html.substring(pe);}
+  var si=html.indexOf('var SAVED_MAP_SLOTS = ');
+  if(si>-1){var se=html.indexOf(';',si)+1;html=html.substring(0,si)+'var SAVED_MAP_SLOTS = '+JSON.stringify(mapSlots)+';'+html.substring(se);}
+  var b=new Blob(['<!DOCTYPE html>\n'+html],{type:'text/html'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='index.html';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);setStatus('\u2713 Exported! Upload index.html to GitHub.');
+}
+function switchTab(e,tab){
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('active');});
+  e.target.classList.add('active');document.getElementById('tab-'+tab).classList.add('active');
+}
+function setStatus(msg){document.getElementById('statusBar').textContent=msg;}
+window.gm_authFailure=function(){setStatus('Google Maps auth failed - check API key');};
+window.onerror=function(msg,src,line){setStatus('Error: '+msg+' (line '+line+')');return false;};
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('ttCloseBtn').addEventListener('click',function(e){e.stopPropagation();closeTT();});
+  document.getElementById('ttSaveBtn').addEventListener('click',function(e){e.stopPropagation();saveTT();});
+  document.getElementById('ttRmBtn').addEventListener('click',function(e){e.stopPropagation();removeTTNurse();});
+  ['zipInput','nurseZip'].forEach(function(id){document.getElementById(id).addEventListener('keydown',function(e){if(e.key==='Enter')addZip();});});
+  ['nbhdName','nbhdNurse'].forEach(function(id){document.getElementById(id).addEventListener('keydown',function(e){if(e.key==='Enter')addNbhd();});});
+  document.getElementById('tt-edit').addEventListener('keydown',function(e){if(e.key==='Enter')saveTT();});
+  document.addEventListener('click',function(e){
+    var tt=document.getElementById('tt');
+    if(tt.classList.contains('visible')&&!tt.contains(e.target)&&!e.target.closest('#map'))closeTT();
+    if(e.target===document.getElementById('loadModal'))closeLoad();
+  });
+});
+window.initMap=initMap;
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCrhz8QmsttpeNdgCL1JPyv1bI-mqJVpMU&libraries=marker&v=weekly&callback=initMap" async defer></script>
+</body>
+</html>
